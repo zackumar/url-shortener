@@ -1,21 +1,25 @@
+import { customAlphabet } from 'nanoid'
+import { initializeApp } from 'firebase-admin'
+import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
-import { initializeApp } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
-
-import * as crypto from 'crypto'
-import base64url from 'base64url'
 
 initializeApp()
-const db = getFirestore()
+const db = admin.firestore()
+
+const numKeys = 100
+const keyLength = 6
+const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+const nanoid = customAlphabet(alphabet, keyLength)
 
 export const keyGen = functions.https.onRequest(async (request, response) => {
-    const numKeys = 100
-    const keyLength = 6
-
-    let keys = []
+    let keys: string[] = []
 
     for (let i = 0; i < numKeys; i++) {
-        let key = base64url(crypto.randomBytes(keyLength)).slice(0, 6)
+        let key = nanoid()
+        if (keys.includes(key)) {
+            i -= 1
+            continue
+        }
         keys.push(key)
     }
 
@@ -28,17 +32,47 @@ export const keyGen = functions.https.onRequest(async (request, response) => {
     response.send(keys.toString())
 })
 
-export const urlEncode = functions.https.onRequest(async (request, response) => {
-    functions.logger.info(request.query['url'], { structuredData: true })
+export const urlEncode = functions.https.onCall(async (data, context) => {
+    functions.logger.info(data, { structuredData: true })
     const keyRef = await db.collection('keys').doc('keys').get()
 
-    let unusedKeys: string[] = keyRef.get('unusedKeys')
-    let usedKeys: string[] = keyRef.get('usedKeys')
+    let usedKeys: string[] = keyRef.get('usedKeys') || []
+
+    if ('alias' in data) {
+        let alias = data['alias']
+
+        if (usedKeys.includes(alias)) {
+            return {
+                status: 'error',
+                error: 'Alias already in use.',
+            }
+        }
+
+        usedKeys.push(alias)
+
+        await db.collection('keys').doc('keys').update({
+            usedKeys: usedKeys,
+        })
+
+        const docRef = db.collection('links').doc(alias)
+        await docRef.set({
+            url: data['url'],
+        })
+
+        return {
+            status: 'ok',
+            alias: alias,
+        }
+    }
+
+    let unusedKeys: string[] = keyRef.get('unusedKeys') || []
 
     let topKey = unusedKeys.pop()
     if (topKey === undefined) {
-        response.sendStatus(401)
-        return
+        return {
+            status: 'error',
+            error: 'No unused keys',
+        }
     }
 
     usedKeys.push(topKey)
@@ -50,10 +84,13 @@ export const urlEncode = functions.https.onRequest(async (request, response) => 
 
     const docRef = db.collection('links').doc(topKey)
     await docRef.set({
-        url: request.query['url'],
+        url: data['url'],
     })
 
-    response.send(`Key for ${request.query['url']}: ${topKey}`)
+    return {
+        status: 'ok',
+        alias: topKey,
+    }
 })
 
 export const urlDecode = functions.https.onRequest(async (request, response) => {

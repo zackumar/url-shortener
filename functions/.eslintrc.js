@@ -15,7 +15,11 @@ module.exports = {
     ],
     plugins: ['@typescript-eslint', 'import'],
     rules: {
-        quotes: ['error', 'double'],
+        'object-curly-spacing': ['error', 'always'],
+        semi: ['error', 'never'],
+        code: 160,
+        quotes: [2, 'single', { avoidEscape: true }],
+        indent: ['error', 4],
         'import/no-unresolved': 0,
     },
 }

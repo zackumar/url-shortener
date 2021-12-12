@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Welcome to Firebase Hosting</title>
+
+        <!-- update the version number as needed -->
+        <script defer src="/__/firebase/9.6.1/firebase-app-compat.js"></script>
+        <!-- include only the Firebase features as you need -->
+        <script defer src="/__/firebase/9.6.1/firebase-functions-compat.js"></script>
+
+        <!-- 
+      initialize the SDK after all desired features are loaded, set useEmulator to false
+      to avoid connecting the SDK to running emulators.
+    -->
+        <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+
+        <style>
+            body {
+                /* background: #eceff1; */
+                text-align: center;
+                font-family: Roboto, Helvetica, Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+            }
+
+            .pane {
+                padding: 2rem;
+                border-radius: 1.5rem;
+                background-color: white;
+                filter: drop-shadow(0 0.75rem 0.75rem rgba(0, 0, 0, 0.2));
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translateX(-50%) translateY(-50%);
+                -webkit-transform: translate(-50%, -50%);
+                transform: translate(-50%, -50%);
+                display: flex;
+                flex-flow: column;
+                align-items: center;
+            }
+
+            .pane h1 {
+                font-size: 1.5em;
+            }
+
+            .pane form {
+                text-align: center;
+                display: inline-block;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="pane">
+            <h1>Zack's Handy Dandy URL Shortener</h1>
+
+            <form id="shortform">
+                <label for="longurl">Enter a long URL to shorten</label><br />
+                <input type="text" id="longurl" /><br />
+                <label for="alias">Enter an alias you would like to use (Optional)</label><br />
+                <input type="text" id="alias" /><br /><br />
+                <input type="submit" value="Shrinkify!" />
+            </form>
+
+            <p id="load">Loading&hellip;</p>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const loadEl = document.querySelector('#load')
+
+                document.getElementById('shortform').addEventListener('submit', (e) => {
+                    e.preventDefault()
+
+                    let longurl = document.getElementById('longurl').value
+                    let alias = document.getElementById('alias').value
+
+                    let data = { url: longurl }
+                    if (alias !== '') data.alias = alias
+
+                    console.log('Encoding url: ', data)
+
+                    firebase
+                        .functions()
+                        .httpsCallable('urlEncode')(data)
+                        .then((res) => {
+                            console.log('urlEncode results: ', res)
+                            let data = res.data
+                            if (data.status === 'ok') {
+                                let href = `https://go.zackumar.com/${data.alias}`
+
+                                loadEl.textContent = `You're URL: `
+                                let link = document.createElement('a')
+                                link.href = href
+                                link.textContent = href
+                                loadEl.appendChild(link)
+                            } else if (data.status === 'error') {
+                                loadEl.textContent = data.error
+                            } else {
+                                loadEl.textContent = `An unknown error has occured`
+                            }
+                        })
+                })
+
+                try {
+                    let app = firebase.app()
+                    let features = ['auth', 'database', 'firestore', 'functions', 'messaging', 'storage', 'analytics', 'remoteConfig', 'performance'].filter(
+                        (feature) => typeof app[feature] === 'function'
+                    )
+                    console.log(`Firebase SDK loaded with ${features.join(', ')}`)
+                    loadEl.textContent = 'Ready!'
+                } catch (e) {
+                    console.error(e)
+                    loadEl.textContent = 'Error! Check Console.'
+                }
+            })
+        </script>
+    </body>
+</html>
