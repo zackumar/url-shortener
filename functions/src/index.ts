@@ -24,6 +24,12 @@ export const keyGen = functions.https.onRequest(async (request, response) => {
     }
 
     const keyRef = db.collection('keys').doc('keys')
+    if ((await keyRef.get()).exists) {
+        functions.logger.info('Keys already made.')
+        response.send('Keys already exist')
+        return
+    }
+
     await keyRef.set({
         usedKeys: [],
         unusedKeys: keys,
@@ -94,9 +100,9 @@ export const urlEncode = functions.https.onCall(async (data, context) => {
 })
 
 export const urlDecode = functions.https.onRequest(async (request, response) => {
-    functions.logger.info(`Decoding: ${request.params[0].slice(1)}`, { struturedData: true })
+    functions.logger.info(`Decoding: ${request.params[0]}`, { struturedData: true })
     console.log(request.params[0].slice(1))
-    const snapshot = await db.collection('links').doc(request.params[0].slice(1)).get()
+    const snapshot = await db.collection('links').doc(request.params[0]).get()
     if (!snapshot.exists) {
         response.sendStatus(401)
         return
