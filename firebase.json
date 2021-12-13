@@ -28,7 +28,7 @@
             },
             {
                 "source": "**",
-                "function": "urlDecode"
+                "destination": "/decode.html"
             }
         ]
     }

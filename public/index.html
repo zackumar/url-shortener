@@ -14,7 +14,7 @@
       initialize the SDK after all desired features are loaded, set useEmulator to false
       to avoid connecting the SDK to running emulators.
     -->
-        <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+        <script defer src="/__/firebase/init.js?useEmulator=false"></script>
 
         <style>
             body {
@@ -74,6 +74,12 @@
                     e.preventDefault()
 
                     let longurl = document.getElementById('longurl').value
+
+                    if (longurl.match(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g) === null) {
+                        loadEl.textContent = `Long URL is not in the correct format. Example URL: https://www.example.com`
+                        return
+                    }
+
                     let alias = document.getElementById('alias').value
 
                     let data = { url: longurl }
